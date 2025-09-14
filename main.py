@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from database.database import SessionLocal, create_tables
 from utilities import insert_sql_query, select_sql_query
-from database.models import Users
+from database.models import Users, Loans
 
 app = FastAPI()
 
@@ -19,7 +19,8 @@ def create_user(email_address: str):
     db = SessionLocal()
     user_id = get_user_id_by_email_address(db, email_address)
     if user_id is None:
-        user_id = make_new_user(db, email_address)
+        make_new_user(db, email_address)
+        user_id = get_user_id_by_email_address(db, email_address)
 
     return {"user_id": user_id}
 
@@ -28,15 +29,55 @@ def make_new_user(db: SessionLocal, email_address: str):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user.id
+    return True
 
 def get_user_id_by_email_address(db: SessionLocal, email_address: str):
-    user = db.query(User).filter(User.email == email_address).first()
+    user = db.query(Users).filter(Users.email == email_address).first()
     if user:
         return user.id
     return None
 
 
+@app.post("/loans/{user_id}")
+def create_loan(user_id: int, amount: float, annual_interest_rate: float, loan_term_in_months: int):
+    db = SessionLocal()
+
+    loan = Loans(
+        owner_id=user_id,
+        amount=amount,
+        annual_interest_rate=annual_interest_rate,
+        loan_term_in_months=loan_term_in_months
+    )
+
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+
+    return {
+        "loan_id": loan.id,
+        "owner_id": loan.owner_id,
+        "amount": loan.amount,
+        "annual_interest_rate": loan.annual_interest_rate,
+        "loan_term_in_months": loan.loan_term_in_months
+    }
+
+@app.get("/loans/{loan_id}")
+def get_loan(loan_id: int):
+    db = SessionLocal()
+    try:
+        loan = db.query(Loans).filter(Loans.id == loan_id).first()
+        if not loan:
+            raise HTTPException(status_code=404, detail="Loan not found")
+        
+        return {
+            "loan_id": loan.id,
+            "owner_id": loan.owner_id,
+            "amount": loan.amount,
+            "annual_interest_rate": loan.annual_interest_rate,
+            "loan_term_in_months": loan.loan_term_in_months
+        }
+    finally:
+        db.close()
 
 
 
