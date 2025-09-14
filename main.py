@@ -37,7 +37,6 @@ def get_user_id_by_email_address(db: SessionLocal, email_address: str):
         return user.id
     return None
 
-
 @app.post("/loans/{user_id}")
 def create_loan(user_id: int, amount: float, annual_interest_rate: float, loan_term_in_months: int):
     db = SessionLocal()
@@ -72,7 +71,8 @@ def get_loan(loan_id: int):
             "owner_id": loan.owner_id,
             "amount": loan.amount,
             "annual_interest_rate": loan.annual_interest_rate,
-            "loan_term_in_months": loan.loan_term_in_months
+            "loan_term_in_months": loan.loan_term_in_months, 
+            "shared_with": loan.shared_with
         }
     finally:
         db.close()
@@ -87,6 +87,23 @@ def get_loans(user_id: int):
             "loan_id": loan.id,
         })
     return loans_list
+
+@app.post("/loans/share/{loan_id}")
+def share_loan(loan_id: int, user_id: int):
+    db = SessionLocal()
+    loan = db.query(Loans).filter(Loans.id == loan_id).first()
+    if user_id not in loan.shared_with and user_id != loan.owner_id:
+        #add to shared with json 
+        shared_with = loan.shared_with.copy()
+        shared_with.append(user_id)
+        loan.shared_with = shared_with
+    db.commit()
+    db.refresh(loan)
+    return {
+        "loan_id": loan.id,
+        "shared_with": loan.shared_with
+    }
+
 
 
 

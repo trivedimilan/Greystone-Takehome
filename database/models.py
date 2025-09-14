@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from database.database import Base
 from sqlalchemy.orm import relationship
 
@@ -21,3 +21,4 @@ class Loans(Base):
     amount = Column(Float)
     annual_interest_rate = Column(Float)
     loan_term_in_months = Column(Integer)
+    shared_with = Column(JSON, default=list)
