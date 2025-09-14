@@ -66,8 +66,6 @@ def get_loan(loan_id: int):
     db = SessionLocal()
     try:
         loan = db.query(Loans).filter(Loans.id == loan_id).first()
-        if not loan:
-            raise HTTPException(status_code=404, detail="Loan not found")
         
         return {
             "loan_id": loan.id,
@@ -78,6 +76,18 @@ def get_loan(loan_id: int):
         }
     finally:
         db.close()
+
+@app.get("/loans/user/{user_id}")
+def get_loans(user_id: int):
+    db = SessionLocal()
+    loans = db.query(Loans).filter(Loans.owner_id == user_id).all()
+    loans_list = []
+    for loan in loans:
+        loans_list.append({
+            "loan_id": loan.id,
+        })
+    return loans_list
+
 
 
 
