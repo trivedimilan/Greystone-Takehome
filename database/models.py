@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from database.database import Base
 from sqlalchemy.orm import relationship
 
@@ -8,4 +8,16 @@ class Users(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
-    loans = relationship("Loan", back_populates="owner")
+    loans = relationship("Loans", back_populates="owner")
+
+class Loans(Base):
+    __tablename__ = "loans"
+    
+    id = Column(Integer, primary_key=True, index=True)
+
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    #foreign key to users table
+    owner = relationship("Users", back_populates="loans")
+    amount = Column(Float)
+    annual_interest_rate = Column(Float)
+    loan_term_in_months = Column(Integer)
