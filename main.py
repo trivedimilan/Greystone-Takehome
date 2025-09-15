@@ -10,13 +10,20 @@ import math
 
 app = FastAPI()
 
-# Create tables on startup
+# Initialize database tables on startup
 @app.on_event("startup")
 def startup_event():
     create_tables()
 
+"""
+touch ups
+- add pagination to get loans and loan schedule
+- add v1
+- add query strings only for filtering
+"""
+
 #endpoint to make a user with a email address
-@app.post("/users/{email_address}")
+@app.post("/v1/users/{email_address}")
 def create_user(email_address: str):
     db = SessionLocal()
     user_id = get_user_id_by_email_address(db, email_address)
@@ -39,7 +46,7 @@ def get_user_id_by_email_address(db: SessionLocal, email_address: str):
         return user.id
     return None
 
-@app.post("/loans/{user_id}")
+@app.post("/v1/users/{user_id}/loans")
 def create_loan(user_id: int, amount: float, annual_interest_rate: float, loan_term_in_months: int):
     db = SessionLocal()
 
@@ -62,7 +69,7 @@ def create_loan(user_id: int, amount: float, annual_interest_rate: float, loan_t
         "loan_term_in_months": loan.loan_term_in_months
     }
 
-@app.get("/loans/{loan_id}")
+@app.get("/v1/users/{user_id}/loans/{loan_id}")
 def get_loan(loan_id: int):
     db = SessionLocal()
     try:
@@ -79,7 +86,7 @@ def get_loan(loan_id: int):
     finally:
         db.close()
 
-@app.get("/loans/user/{user_id}")
+@app.get("/v1/users/{user_id}/loans")
 def get_loans(user_id: int):
     db = SessionLocal()
     loans = db.query(Loans).filter(Loans.owner_id == user_id).all()
@@ -90,14 +97,14 @@ def get_loans(user_id: int):
         })
     return loans_list
 
-@app.post("/loans/share/{loan_id}")
-def share_loan(loan_id: int, user_id: int):
+@app.patch("/v1/users/{user_id}/loans/{loan_id}/share/{shared_with_user_id}")
+def share_loan(loan_id: int, user_id: int, shared_with_user_id: int):
     db = SessionLocal()
     loan = db.query(Loans).filter(Loans.id == loan_id).first()
-    if user_id not in loan.shared_with and user_id != loan.owner_id:
+    if (user_id = loan.owner_id or user_id in (loan.shared_with)) and shared_with_user_id not in loan.shared_with and shared_with_user_id != loan.owner_id:
         #add to shared with json 
         shared_with = loan.shared_with.copy()
-        shared_with.append(user_id)
+        shared_with.append(shared_with_user_id)
         loan.shared_with = shared_with
     db.commit()
     db.refresh(loan)
@@ -106,19 +113,18 @@ def share_loan(loan_id: int, user_id: int):
         "shared_with": loan.shared_with
     }
 
-@app.get("/loans/loan_schedule/{loan_id}")
+@app.get("/v1/users/{user_id}/loans/{loan_id}/schedule")
 def get_loan_schedule(loan_id: int):
-    db = SessionLocal()
-    loan = db.query(Loans).filter(Loans.id == loan_id).first()
-    
 
-@app.get("/loans/{loan_id}/schedule")
-def get_loan_schedule(loan_id: int):
     db = SessionLocal()
     loan = db.query(Loans).filter(Loans.id == loan_id).first()
 
     if not loan:
         return {"error": "Loan not found"}
+
+    #check if user is owner or in shared with
+    if user_id != loan.owner_id and user_id not in loan.shared_with:
+        return {"error": "Loan is not shared with user"}
 
     # Loan details
     principal = loan.amount
@@ -152,7 +158,7 @@ def get_loan_schedule(loan_id: int):
         "schedule": schedule
     }
 
-@app.get("/loans/{loan_id}/summary/{month}")
+@app.get("/v1/users/{user_id}/loans/{loan_id}/schedule/{month}")
 def get_loan_summary(loan_id: int, month: int):
     db = SessionLocal()
     loan = db.query(Loans).filter(Loans.id == loan_id).first()
