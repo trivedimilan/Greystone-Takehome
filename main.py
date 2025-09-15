@@ -6,6 +6,8 @@ from database.database import SessionLocal, create_tables
 from utilities import insert_sql_query, select_sql_query
 from database.models import Users, Loans
 
+import math
+
 app = FastAPI()
 
 # Create tables on startup
@@ -104,6 +106,96 @@ def share_loan(loan_id: int, user_id: int):
         "shared_with": loan.shared_with
     }
 
+@app.get("/loans/loan_schedule/{loan_id}")
+def get_loan_schedule(loan_id: int):
+    db = SessionLocal()
+    loan = db.query(Loans).filter(Loans.id == loan_id).first()
+    
+
+@app.get("/loans/{loan_id}/schedule")
+def get_loan_schedule(loan_id: int):
+    db = SessionLocal()
+    loan = db.query(Loans).filter(Loans.id == loan_id).first()
+
+    if not loan:
+        return {"error": "Loan not found"}
+
+    # Loan details
+    principal = loan.amount
+    annual_interest_rate = loan.annual_interest_rate
+    months = loan.loan_term_in_months
+    monthly_rate = annual_interest_rate / 12.0
+
+    if monthly_rate > 0:
+        monthly_payment = (
+            principal * monthly_rate / (1 - math.pow(1 + monthly_rate, -months))
+        )
+    else:
+        monthly_payment = principal / months
+
+    balance = principal
+    schedule = []
+
+    for month in range(1, months + 1):
+        interest = balance * monthly_rate
+        principal_payment = monthly_payment - interest
+        balance -= principal_payment
+        balance = max(balance, 0)
+
+        schedule.append({
+            "month": month,
+            "monthly_payment": round(monthly_payment, 2),
+            "remaining_balance": round(balance, 2)
+        })
+
+    return {
+        "schedule": schedule
+    }
+
+@app.get("/loans/{loan_id}/summary/{month}")
+def get_loan_summary(loan_id: int, month: int):
+    db = SessionLocal()
+    loan = db.query(Loans).filter(Loans.id == loan_id).first()
+
+    if not loan:
+        return {"error": "Loan not found"}
+
+    # Loan details
+    principal = loan.amount
+    annual_interest_rate = loan.annual_interest_rate
+    months = loan.loan_term_in_months
+    monthly_rate = annual_interest_rate / 12.0
+
+    if month < 1 or month > months:
+        return {"error": f"Month must be between 1 and {months}"}
+
+    if monthly_rate > 0:
+        monthly_payment = (
+            principal * monthly_rate / (1 - math.pow(1 + monthly_rate, -months))
+        )
+    else:
+        monthly_payment = principal / months
+
+    balance = principal
+    total_interest_paid = 0
+    total_principal_paid = 0
+
+    for m in range(1, month + 1):
+        interest = balance * monthly_rate
+        principal_payment = monthly_payment - interest
+        balance -= principal_payment
+        balance = max(balance, 0)
+
+        total_interest_paid += interest
+        total_principal_paid += principal_payment
+
+    return {
+        "loan_id": loan.id,
+        "month": month,
+        "remaining_balance": round(balance, 2),
+        "aggregate_principal_paid": round(total_principal_paid, 2),
+        "aggregate_interest_paid": round(total_interest_paid, 2),
+    }
 
 
 
