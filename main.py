@@ -169,6 +169,23 @@ def share_loan(user_id: int, loan_id: int, shared_with_user_id: int):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User is already shared or is the loan owner"
             )
+            
+        # query and make sure user exists
+        shared_with_user = None
+        try:
+            # Fetch user from DB
+            shared_with_user = db.query(Users).filter(Users.id == shared_with_user_id).first()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database error: {e}"
+            )
+
+        if not shared_with_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with id {shared_with_user_id} not found"
+            )
 
         # Update shared_with
         loan.shared_with.append(shared_with_user_id)
