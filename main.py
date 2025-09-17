@@ -19,15 +19,6 @@ def startup_event():
     create_tables()
 
 """
-touch ups
-- add pagination to get loans and loan schedule
-- add v1
-- add query strings only for filtering
-- make user with email address in body
-- fix database connection issues
-"""
-
-"""
 SCHEMAS
 """
 class UserCreate(BaseModel):
@@ -110,7 +101,7 @@ def create_loan(user_id: int, loan: LoanCreate):
         }
 
 @app.get("/v1/users/{user_id}/loans")
-def get_loans(user_id: int):
+def get_loans(user_id: int, limit: int = 10, offset: int = 0):
     with SessionLocal() as db:
         user = None
         try:
@@ -131,7 +122,7 @@ def get_loans(user_id: int):
         # Fetch loans
         loans = None
         try:
-            loans = db.query(Loans).filter(Loans.owner_id == user_id).all()
+            loans = db.query(Loans).filter(Loans.owner_id == user_id).offset(offset).limit(limit).all()
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -140,9 +131,12 @@ def get_loans(user_id: int):
 
         loans_list = [{"loan_id": loan.id} for loan in loans]
 
-        return loans_list
+        return {
+            "loans": loans_list, 
+            "offset": offset + len(loans_list),
+        }
 
-@app.patch("/v1/users/{user_id}/loans/{loan_id}/share/{shared_with_user_id}", status_code=status.HTTP_200_OK)
+@app.patch("/v1/users/{user_id}/loans/{loan_id}/share/{shared_with_user_id}")
 def share_loan(user_id: int, loan_id: int, shared_with_user_id: int):
     with SessionLocal() as db:
         loan = None
