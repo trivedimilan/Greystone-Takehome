@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from database.database import Base
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.mutable import MutableList
 
 
 class Users(Base):
@@ -21,4 +22,4 @@ class Loans(Base):
     amount = Column(Float)
     annual_interest_rate = Column(Float)
     loan_term_in_months = Column(Integer)
-    shared_with = Column(JSON, default=list)
+    shared_with = Column(MutableList.as_mutable(JSON), default=[])
