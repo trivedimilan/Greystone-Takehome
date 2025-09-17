@@ -16,6 +16,11 @@ GET /v1/users/{user_id}/loans/{loan_id}/schedule
 GET /v1/users/{user_id}/loans/{loan_id}/schedule/{month}
     - Returns a specific month schedule for a given loan_id and user_id
 
+To start the server locally. I ran this command:
+
+fastapi dev main.py
+
+
 Please look at ./test_main.py for all expected inputs and outputs as well as for examples on how to use the api.
     - test_create_user(), test_create_loan() will not pass criteria unless first checking what the latest id is and setting the passing criteria to latest + 1
     - test_share_loan() will not pass if the user was already shared with, so this also requires a 'fresh' test
